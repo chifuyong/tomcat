@@ -17,6 +17,11 @@
 
 package org.apache.tomcat.util.net;
 
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
+import org.apache.tomcat.util.ExceptionUtils;
+import org.apache.tomcat.util.net.AbstractEndpoint.Handler.SocketState;
+import org.apache.tomcat.util.security.PrivilegedSetTccl;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
@@ -27,12 +32,6 @@ import java.security.PrivilegedAction;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RejectedExecutionException;
-
-import org.apache.juli.logging.Log;
-import org.apache.juli.logging.LogFactory;
-import org.apache.tomcat.util.ExceptionUtils;
-import org.apache.tomcat.util.net.AbstractEndpoint.Handler.SocketState;
-import org.apache.tomcat.util.security.PrivilegedSetTccl;
 
 
 /**
@@ -218,8 +217,7 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
 
                     Socket socket = null;
                     try {
-                        // Accept the next incoming connection from the server
-                        // socket
+                        //todo<chify> socket 接受请求数据
                         socket = serverSocketFactory.acceptSocket(serverSocket);
                     } catch (IOException ioe) {
                         countDownConnection();
@@ -233,7 +231,7 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
 
                     // Configure the socket
                     if (running && !paused && setSocketOptions(socket)) {
-                        // Hand this socket off to an appropriate processor
+                        //todo<chify>  把 socket 交给 processor 处理
                         if (!processSocket(socket)) {
                             countDownConnection();
                             // Close socket right away
@@ -295,6 +293,7 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
 
         @Override
         public void run() {
+            //todo<chify> 处理 socket 数据
             boolean launch = false;
             synchronized (socket) {
                 try {
@@ -314,6 +313,7 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
 
                     if ((state != SocketState.CLOSED)) {
                         if (status == null) {
+                            //todo<chify> 此处处理
                             state = handler.process(socket, SocketStatus.OPEN_READ);
                         } else {
                             state = handler.process(socket,status);
@@ -428,14 +428,16 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
 
             // Create worker collection
             if (getExecutor() == null) {
+                //todo<chify>  这里创建线程池 http-bio-8080-exec-1/10，默认最小 10个，最大200，工作线程
                 createExecutor();
             }
 
             initializeConnectionLatch();
 
+            //todo<chify> 这里创建接收线程 http-bio-8080-Acceptor-0
             startAcceptorThreads();
 
-            // Start async timeout thread
+            //todo<chify>  这里创建 http-bio-8080-AsyncTimeout 线程 Start async timeout thread
             Thread timeoutThread = new Thread(new AsyncTimeout(),
                     getName() + "-AsyncTimeout");
             timeoutThread.setPriority(threadPriority);
@@ -531,6 +533,7 @@ public class JIoEndpoint extends AbstractEndpoint<Socket> {
             if (!running) {
                 return false;
             }
+            //todo<chify> 这里交由 SocketProcessor 处理
             getExecutor().execute(new SocketProcessor(wrapper));
         } catch (RejectedExecutionException x) {
             log.warn("Socket processing request was rejected for:"+socket,x);

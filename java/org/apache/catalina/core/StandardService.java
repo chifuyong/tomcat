@@ -19,25 +19,18 @@
 package org.apache.catalina.core;
 
 
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeSupport;
-import java.util.ArrayList;
-
-import javax.management.ObjectName;
-
-import org.apache.catalina.Container;
-import org.apache.catalina.Engine;
-import org.apache.catalina.Executor;
-import org.apache.catalina.LifecycleException;
-import org.apache.catalina.LifecycleState;
-import org.apache.catalina.Server;
-import org.apache.catalina.Service;
+import org.apache.catalina.*;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.mbeans.MBeanUtils;
 import org.apache.catalina.util.LifecycleMBeanBase;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.apache.tomcat.util.res.StringManager;
+
+import javax.management.ObjectName;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
 
 
 /**
@@ -457,6 +450,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
                 try {
                     // If it has already failed, don't try and start it
                     if (connector.getState() != LifecycleState.FAILED) {
+                        //todo<chify> 这里 connector 进行启动，开启 socket 接受客户端请求
                         connector.start();
                     }
                 } catch (Exception e) {
@@ -541,6 +535,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
 
         super.initInternal();
 
+        //容器初始化
         if (container != null) {
             container.init();
         }
@@ -550,6 +545,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
             if (executor instanceof LifecycleMBeanBase) {
                 ((LifecycleMBeanBase) executor).setDomain(getDomain());
             }
+            //初始化 executor
             executor.init();
         }
 
@@ -557,6 +553,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         synchronized (connectorsLock) {
             for (Connector connector : connectors) {
                 try {
+                    //todo<chify> connector 初始化
                     connector.init();
                 } catch (Exception e) {
                     String message = sm.getString(

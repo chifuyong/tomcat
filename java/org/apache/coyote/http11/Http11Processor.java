@@ -16,12 +16,6 @@
  */
 package org.apache.coyote.http11;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.util.Set;
-
 import org.apache.coyote.ActionCode;
 import org.apache.coyote.http11.filters.BufferedInputFilter;
 import org.apache.juli.logging.Log;
@@ -32,6 +26,12 @@ import org.apache.tomcat.util.net.JIoEndpoint;
 import org.apache.tomcat.util.net.SSLSupport;
 import org.apache.tomcat.util.net.SocketStatus;
 import org.apache.tomcat.util.net.SocketWrapper;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.util.Set;
 
 
 /**
@@ -171,6 +171,7 @@ public class Http11Processor extends AbstractHttp11Processor<Socket> {
                 }
             }
             socketWrapper.getSocket().setSoTimeout(firstReadTimeout);
+            // todo<chify> 这里读取客户端数据
             if (!inputBuffer.fill()) {
                 throw new EOFException(sm.getString("iib.eof.error"));
             }

@@ -17,25 +17,7 @@
 package org.apache.catalina.startup;
 
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Constructor;
-import java.net.ConnectException;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.LogManager;
-
-import org.apache.catalina.Container;
-import org.apache.catalina.Globals;
-import org.apache.catalina.LifecycleException;
-import org.apache.catalina.LifecycleState;
-import org.apache.catalina.Server;
+import org.apache.catalina.*;
 import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.security.SecurityConfig;
 import org.apache.juli.ClassLoaderLogManager;
@@ -50,6 +32,13 @@ import org.apache.tomcat.util.res.StringManager;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXParseException;
+
+import java.io.*;
+import java.lang.reflect.Constructor;
+import java.net.ConnectException;
+import java.net.Socket;
+import java.util.*;
+import java.util.logging.LogManager;
 
 
 /**
@@ -74,6 +63,10 @@ import org.xml.sax.SAXParseException;
  */
 public class Catalina {
 
+    /**
+     * 方便翻看代码添加
+     * */
+    Properties properties = System.getProperties();
 
     /**
      * The string manager for this package.
@@ -271,12 +264,15 @@ public class Catalina {
                 usage();
                 return false;
             } else if (arg.equals("start")) {
+                //已经过时，没啥用，后面的版本都已经去掉了
                 starting = true;
                 stopping = false;
             } else if (arg.equals("configtest")) {
+                //已经过时，没啥用，后面的版本都已经去掉了
                 starting = true;
                 stopping = false;
             } else if (arg.equals("stop")) {
+                //已经过时，没啥用，后面的版本都已经去掉了
                 starting = false;
                 stopping = true;
             } else {
@@ -555,7 +551,7 @@ public class Catalina {
      * Start a new server instance.
      */
     public void load() {
-
+        log.info("chify:------------- 3. Catalina load starting -------------");
         if (loaded) {
             return;
         }
@@ -563,13 +559,17 @@ public class Catalina {
 
         long t1 = System.nanoTime();
 
+        //初始化目录，其实没用 tomcat 10 已删掉此代码，
+        //在 BootStrap init 的时候已经做了，就是设置 catalina.home 和 catalina.base
         initDirs();
 
         // Before digester - it may be needed
+        // 设置catalina.useNaming的系统参数
         initNaming();
 
         // Create and execute our Digester
-        Digester digester = createStartDigester();
+        // 通过 Digester 去解析 server.xml 文件,然后加载容器
+        Digester digester = this.createStartDigester();
 
         InputSource inputSource = null;
         InputStream inputStream = null;
@@ -634,6 +634,7 @@ public class Catalina {
             try {
                 inputSource.setByteStream(inputStream);
                 digester.push(this);
+                // todo<chify> 读取 server.xml 配置文件解析出 server、service、connector、host对象
                 digester.parse(inputSource);
             } catch (SAXParseException spe) {
                 log.warn("Catalina.start using " + getConfigFile() + ": " +
@@ -660,6 +661,7 @@ public class Catalina {
 
         // Start the new server
         try {
+            // todo<chify> 这里进行 server 的初始化
             getServer().init();
         } catch (LifecycleException e) {
             if (Boolean.getBoolean("org.apache.catalina.startup.EXIT_ON_INIT_FAILURE")) {
@@ -743,6 +745,7 @@ public class Catalina {
         }
 
         if (await) {
+            //todo<chify> 这里会看 server.conf 配置文件中有没有配置，<Server port="8005" shutdown="SHUTDOWN">，有的话发送这个命令会结束程序
             await();
             stop();
         }
@@ -825,6 +828,7 @@ public class Catalina {
             if (j2eeHome != null) {
                 catalinaHome=System.getProperty("com.sun.enterprise.home");
             } else if (System.getProperty(Globals.CATALINA_BASE_PROP) != null) {
+                //这一块代码有毒。。。肯定不会走这里
                 catalinaHome = System.getProperty(Globals.CATALINA_BASE_PROP);
             }
         }
@@ -882,6 +886,7 @@ public class Catalina {
         } else {
             System.setProperty("catalina.useNaming", "true");
             String value = "org.apache.naming";
+            // javax.naming.Context.URL_PKG_PREFIXES = "java.naming.factory.url.pkgs"
             String oldValue =
                 System.getProperty(javax.naming.Context.URL_PKG_PREFIXES);
             if (oldValue != null) {
@@ -891,6 +896,7 @@ public class Catalina {
             if( log.isDebugEnabled() ) {
                 log.debug("Setting naming prefix=" + value);
             }
+            // javax.naming.Context.INITIAL_CONTEXT_FACTORY = "java.naming.factory.initial"
             value = System.getProperty
                 (javax.naming.Context.INITIAL_CONTEXT_FACTORY);
             if (value == null) {
@@ -938,6 +944,7 @@ public class Catalina {
                 if (logManager instanceof ClassLoaderLogManager) {
                     ((ClassLoaderLogManager) logManager).shutdown();
                 }
+                log.info("CatalinaShutdownHook 执行结束....");
             }
         }
     }

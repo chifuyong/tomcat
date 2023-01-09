@@ -16,6 +16,13 @@
  */
 package org.apache.catalina.startup;
 
+import org.apache.catalina.Globals;
+import org.apache.catalina.security.SecurityClassLoad;
+import org.apache.catalina.startup.ClassLoaderFactory.Repository;
+import org.apache.catalina.startup.ClassLoaderFactory.RepositoryType;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
+
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,14 +30,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.StringTokenizer;
-
-import org.apache.catalina.Globals;
-import org.apache.catalina.security.SecurityClassLoad;
-import org.apache.catalina.startup.ClassLoaderFactory.Repository;
-import org.apache.catalina.startup.ClassLoaderFactory.RepositoryType;
-import org.apache.juli.logging.Log;
-import org.apache.juli.logging.LogFactory;
 
 /**
  * Bootstrap loader for Catalina.  This application constructs a class loader
@@ -52,17 +53,31 @@ public final class Bootstrap {
      * Daemon object used by main.
      */
     private static final Object daemonLock = new Object();
-    private static volatile Bootstrap daemon = null;
-
-
-    // -------------------------------------------------------------- Variables
-
 
     /**
-     * Daemon reference.
+     * Bootstrap 自身对象，main 方法中，init()后，再将对象赋值给 deamon
+     */
+    private static volatile Bootstrap daemon = null;
+
+    // -------------------------------------------------------------- Variables
+    /**
+     * 为了查看 VM option 设置的虚拟机参数添加
+     */
+    Properties properties = System.getProperties();
+
+    /**
+     * 为了查看代码添加
+     * */
+    private Thread thread;
+
+    /**
+     * Daemon reference. Bootstrap init 时反射获取到的 Catlina 对象引用
      */
     private Object catalinaDaemon = null;
 
+    /**
+     * Bootstarp initClassLoaders 时设置的 Catlina 类加载器
+     */
     ClassLoader commonLoader = null;
     ClassLoader catalinaLoader = null;
     ClassLoader sharedLoader = null;
@@ -73,6 +88,7 @@ public final class Bootstrap {
 
     private void initClassLoaders() {
         try {
+            // conf 目录下 的 catalina.properties 有相应的 loader 配置（common.loader、server.loader、shared.loader）
             commonLoader = createClassLoader("common", null);
             if (commonLoader == null) {
                 // no config file, default to this loader - we might be in a 'single' env.
@@ -81,7 +97,7 @@ public final class Bootstrap {
             catalinaLoader = createClassLoader("server", commonLoader);
             sharedLoader = createClassLoader("shared", commonLoader);
         } catch (Throwable t) {
-            handleThrowable(t);
+            handleThrowable(t);//抛出 ThreadDeath 或者 VirtualMachineError
             log.error("Class loader creation threw exception", t);
             System.exit(1);
         }
@@ -92,8 +108,9 @@ public final class Bootstrap {
         throws Exception {
 
         String value = CatalinaProperties.getProperty(name + ".loader");
-        if ((value == null) || (value.equals("")))
+        if ((value == null) || (value.equals(""))){
             return parent;
+        }
 
         value = replace(value);
 
@@ -188,23 +205,30 @@ public final class Bootstrap {
         setCatalinaHome();
         setCatalinaBase();
 
+        //初始化类加载器commonLoader、catalinaLoader、sharedLoader
         initClassLoaders();
 
+        this.thread = Thread.currentThread();
         Thread.currentThread().setContextClassLoader(catalinaLoader);
 
         SecurityClassLoad.securityClassLoad(catalinaLoader);
 
         // Load our startup class and call its process() method
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()){
             log.debug("Loading startup class");
+        }
+
+        //反射获取 Catlina 类实例，调用 Catalina 的 setParentClassLoader 方法，把 Bootstrap 持有的 shareLoader ClassLoader 赋值给 Catalina 的 parentClassLoader
         Class<?> startupClass =
             catalinaLoader.loadClass
             ("org.apache.catalina.startup.Catalina");
         Object startupInstance = startupClass.newInstance();
 
         // Set the shared extensions class loader
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()){
             log.debug("Setting startup class properties");
+        }
+
         String methodName = "setParentClassLoader";
         Class<?> paramTypes[] = new Class[1];
         paramTypes[0] = Class.forName("java.lang.ClassLoader");
@@ -213,7 +237,7 @@ public final class Bootstrap {
         Method method =
             startupInstance.getClass().getMethod(methodName, paramTypes);
         method.invoke(startupInstance, paramValues);
-
+        //反射获取到的 catalina 对象
         catalinaDaemon = startupInstance;
     }
 
@@ -221,7 +245,7 @@ public final class Bootstrap {
     /**
      * Load daemon.
      */
-    private void load(String[] arguments) throws Exception {
+    private void  load(String[] arguments) throws Exception {
 
         // Call the load() method
         String methodName = "load";
@@ -236,6 +260,7 @@ public final class Bootstrap {
             param = new Object[1];
             param[0] = arguments;
         }
+        //通过反射调用 Catalina 的 load 方法
         Method method =
             catalinaDaemon.getClass().getMethod(methodName, paramTypes);
         if (log.isDebugEnabled()) {
@@ -344,7 +369,7 @@ public final class Bootstrap {
         Object paramValues[] = new Object[1];
         paramValues[0] = Boolean.valueOf(await);
         Method method =
-            catalinaDaemon.getClass().getMethod("setAwait", paramTypes);
+        catalinaDaemon.getClass().getMethod("setAwait", paramTypes);
         method.invoke(catalinaDaemon, paramValues);
     }
 
@@ -387,6 +412,7 @@ public final class Bootstrap {
                     t.printStackTrace();
                     return;
                 }
+                //将初始化好的  Bootstrap 对象赋值给 Bootstrap 自身持有的静态对象 daemon
                 daemon = bootstrap;
             } else {
                 // When running as a service the call to stop will be on a new
@@ -399,6 +425,7 @@ public final class Bootstrap {
         try {
             String command = "start";
             if (args.length > 0) {
+                //如果args有数据，取最后一个string 当做命令
                 command = args[args.length - 1];
             }
 
@@ -410,8 +437,13 @@ public final class Bootstrap {
                 args[args.length - 1] = "stop";
                 daemon.stop();
             } else if (command.equals("start")) {
+                //daemon.setAwait(true) 通过反射调用 Catalina 的 setAwait(true),把 await 设置成 true
                 daemon.setAwait(true);
+
+                //daemon.load(args) 通过反射调用 Catalina 的 load()
                 daemon.load(args);
+
+                //daemon.load(args) 通过反射调用 Catalina 的 start()
                 daemon.start();
                 if (null == daemon.getServer()) {
                     System.exit(1);
@@ -454,15 +486,21 @@ public final class Bootstrap {
      */
     private void setCatalinaBase() {
 
-        if (System.getProperty(Globals.CATALINA_BASE_PROP) != null)
+        // Globals.CATALINA_BASE_PROP = catalina.base
+        if (System.getProperty(Globals.CATALINA_BASE_PROP) != null){
+            // VM option 配置了 -Dcatalina.base= 参数，直接取
             return;
-        if (System.getProperty(Globals.CATALINA_HOME_PROP) != null)
+        }
+        if (System.getProperty(Globals.CATALINA_HOME_PROP) != null){
+            // Globals.CATALINA_HOME_PROP = catalina.home 在 setCatalinaHome() 时就设置了，会直接走这一块
             System.setProperty(Globals.CATALINA_BASE_PROP,
                                System.getProperty(Globals.CATALINA_HOME_PROP));
-        else
+        }
+        else{
+            //理论上不会走到这个分支里,因为 setCatalinaHome() 一定会设置 catalina.home 值
             System.setProperty(Globals.CATALINA_BASE_PROP,
                                System.getProperty("user.dir"));
-
+        }
     }
 
 
@@ -472,11 +510,15 @@ public final class Bootstrap {
      */
     private void setCatalinaHome() {
 
-        if (System.getProperty(Globals.CATALINA_HOME_PROP) != null)
+        // Globals.CATALINA_HOME_PROP = "catalina.home"
+        if (System.getProperty(Globals.CATALINA_HOME_PROP) != null ){
+            //可以通过 VM option 配置 -Dcatalina.home= 参数，从而配置 catalina.home 的位置
             return;
+        }
         File bootstrapJar =
             new File(System.getProperty("user.dir"), "bootstrap.jar");
         if (bootstrapJar.exists()) {
+            //存在 bootstrap.jar 包，下载完tomcat使用脚本启动的时候，user.dir=E:\Program Files (x86)\apache-tomcat\apache-tomcat-8.5.57\bin，是存在此jar包的
             try {
                 System.setProperty
                     (Globals.CATALINA_HOME_PROP,
@@ -488,10 +530,10 @@ public final class Bootstrap {
                                    System.getProperty("user.dir"));
             }
         } else {
+            //不存在 bootstrap.jar 包，本地工程启动是不存在此 jar 包的，user.dir = D:\idea-project-root\ChiFuYong\tomcat (项目的目录)
             System.setProperty(Globals.CATALINA_HOME_PROP,
                                System.getProperty("user.dir"));
         }
-
     }
 
 

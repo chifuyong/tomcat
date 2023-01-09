@@ -16,9 +16,6 @@
  */
 package org.apache.coyote.http11;
 
-import java.io.IOException;
-import java.net.Socket;
-
 import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.Processor;
 import org.apache.coyote.http11.upgrade.BioProcessor;
@@ -29,6 +26,9 @@ import org.apache.tomcat.util.net.JIoEndpoint;
 import org.apache.tomcat.util.net.JIoEndpoint.Handler;
 import org.apache.tomcat.util.net.SSLImplementation;
 import org.apache.tomcat.util.net.SocketWrapper;
+
+import java.io.IOException;
+import java.net.Socket;
 
 
 /**
@@ -59,6 +59,7 @@ public class Http11Protocol extends AbstractHttp11JsseProtocol<Socket> {
 
 
     public Http11Protocol() {
+        //todo<chify> tomcat 7.0 默认使用 BIO
         endpoint = new JIoEndpoint();
         cHandler = new Http11ConnectionHandler(this);
         ((JIoEndpoint) endpoint).setHandler(cHandler);

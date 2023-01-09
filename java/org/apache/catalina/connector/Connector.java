@@ -16,15 +16,6 @@
  */
 package org.apache.catalina.connector;
 
-import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-
-import javax.management.ObjectName;
-
 import org.apache.catalina.Globals;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.LifecycleState;
@@ -43,6 +34,14 @@ import org.apache.tomcat.util.buf.EncodedSolidusHandling;
 import org.apache.tomcat.util.buf.UDecoder;
 import org.apache.tomcat.util.http.mapper.Mapper;
 import org.apache.tomcat.util.res.StringManager;
+
+import javax.management.ObjectName;
+import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 
 
 /**
@@ -70,6 +69,7 @@ public class Connector extends LifecycleMBeanBase  {
     }
 
     public Connector(String protocol) {
+        //todo<chify> 这里进行 Connector ProtocolHandler 配置
         setProtocol(protocol);
         // Instantiate protocol handler
         try {
@@ -1027,6 +1027,7 @@ public class Connector extends LifecycleMBeanBase  {
         }
 
         try {
+            //todo<chify> ProtocolHandler 初始化
             protocolHandler.init();
         } catch (Exception e) {
             throw new LifecycleException(
@@ -1055,6 +1056,7 @@ public class Connector extends LifecycleMBeanBase  {
         setState(LifecycleState.STARTING);
 
         try {
+            //这里启动
             protocolHandler.start();
         } catch (Exception e) {
             String errPrefix = "";
