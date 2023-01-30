@@ -16,11 +16,6 @@
  */
 package org.apache.coyote.http11;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Socket;
-
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.Request;
 import org.apache.juli.logging.Log;
@@ -31,6 +26,11 @@ import org.apache.tomcat.util.http.HeaderUtil;
 import org.apache.tomcat.util.http.parser.HttpParser;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapper;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Socket;
 
 /**
  * Implementation of InputBuffer which provides HTTP request header parsing as
@@ -91,10 +91,7 @@ public class InternalInputBuffer extends AbstractInputBuffer<Socket> {
 
         int start = 0;
 
-        //
-        // Skipping blank lines
-        //
-
+        // todo<chify> 这里跳过 CR or LF 空格
         do {
 
             // Read new bytes if needed
@@ -145,6 +142,7 @@ public class InternalInputBuffer extends AbstractInputBuffer<Socket> {
         }
 
         // Spec says single SP but also be tolerant of multiple SP and/or HT
+        // todo<chify> 这里跳过 CR，并且容忍 HT tab 制表符
         while (space) {
             // Read new bytes if needed
             if (pos >= lastValid) {
@@ -230,6 +228,7 @@ public class InternalInputBuffer extends AbstractInputBuffer<Socket> {
         }
 
         // Spec says single SP but also says be tolerant of multiple SP and/or HT
+        // todo<chify> 这里跳过 CR，并且容忍 HT tab 制表符
         while (space && !eol) {
             // Read new bytes if needed
             if (pos >= lastValid) {
