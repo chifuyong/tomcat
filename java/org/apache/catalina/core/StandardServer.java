@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
 import java.security.AccessControlException;
+import java.util.Date;
 import java.util.Random;
 
 
@@ -401,6 +402,9 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
                 awaitThread = Thread.currentThread();
                 while(!stopAwait) {
                     try {
+                        //todo<chify>这里进行 while 循环，线程没有被阻塞，还是会占用 cpu 资源，
+                        //os 调度的时候还是会分配cpu时间片给主线程，所以不推荐将 Server 的 port 配置成 -1
+                        log.info(Thread.currentThread().getName() + "线程开始执行，占用cpu资源循环操作，时间: " + new Date());
                         Thread.sleep( 10000 );
                     } catch( InterruptedException ex ) {
                         // continue and check the flag

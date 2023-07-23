@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.tomcat</groupId>
-    <artifactId>Tomcat</artifactId>
-    <name>Tomcat</name>
+    <artifactId>tomcat</artifactId>
+    <name>tomcat</name>
     <version>7.0</version>
 
     <!-- 7.0 tomcat 代码分析 -->
