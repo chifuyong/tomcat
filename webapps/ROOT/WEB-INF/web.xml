@@ -27,4 +27,22 @@
      Welcome to Tomcat
   </description>
 
+  <filter>
+    <filter-name>debugFilter</filter-name>
+    <filter-class>com.example.DebugFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>debugFilter</filter-name>
+    <url-pattern>/debug-demo</url-pattern>
+  </filter-mapping>
+
+  <servlet>
+    <servlet-name>debugServlet</servlet-name>
+    <servlet-class>com.example.DebugServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>debugServlet</servlet-name>
+    <url-pattern>/debug-demo</url-pattern>
+  </servlet-mapping>
+
 </web-app>

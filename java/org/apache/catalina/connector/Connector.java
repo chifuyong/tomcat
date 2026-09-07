@@ -1056,7 +1056,7 @@ public class Connector extends LifecycleMBeanBase  {
         setState(LifecycleState.STARTING);
 
         try {
-            //这里启动
+            //todo<chify> 这里启动协议处理器
             protocolHandler.start();
         } catch (Exception e) {
             String errPrefix = "";

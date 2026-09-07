@@ -32,10 +32,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.ConcurrentModificationException;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -339,7 +336,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
     public void setPollerThreadCount(int pollerThreadCount) { this.pollerThreadCount = pollerThreadCount; }
     public int getPollerThreadCount() { return pollerThreadCount; }
 
-    protected long selectorTimeout = 1000;
+    protected long selectorTimeout = 3000;
     public void setSelectorTimeout(long timeout){ this.selectorTimeout = timeout;}
     public long getSelectorTimeout(){ return this.selectorTimeout; }
     /**
@@ -542,12 +539,14 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
 
             // Create worker collection
             if ( getExecutor() == null ) {
+                // todo<chify> 关键的工作线程，所有的http请求最终都会交由此线程池处理
                 createExecutor();
             }
 
             initializeConnectionLatch();
 
             // Start poller threads
+            // todo<chify> 开启 poller 线程
             pollers = new Poller[getPollerThreadCount()];
             for (int i=0; i<pollers.length; i++) {
                 pollers[i] = new Poller();
@@ -692,6 +691,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
                     channel.reset();
                 }
             }
+            // todo<chify> 注册event到poller的events队列，然后拍醒poller线程，驱动其往下执行
             getPoller0().register(channel);
         } catch (Throwable t) {
             ExceptionUtils.handleThrowable(t);
@@ -760,6 +760,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
             SocketProcessor sc = processorCache.poll();
             if ( sc == null ) sc = new SocketProcessor(socket,status);
             else sc.reset(socket,status);
+            // todo <chify> 交接给work线程池处理
             if ( dispatch && getExecutor()!=null ) getExecutor().execute(sc);
             else sc.run();
         } catch (RejectedExecutionException rx) {
@@ -826,6 +827,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
                     try {
                         // Accept the next incoming connection from the server
                         // socket
+                        // todo<chify> Acceptor线程进行接客，接收已经握手好的tcp链接
                         socket = serverSock.accept();
                     } catch (IOException ioe) {
                         //we didn't get a socket
@@ -929,6 +931,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
         public void run() {
             if ( interestOps == OP_REGISTER ) {
                 try {
+                    // todo<chify> poller 线程把 PollerEvent 事件里的 SocketChannel 挂到 selector 上，监听 OP_READ
                     socket.getIOChannel().register(socket.getPoller().getSelector(), SelectionKey.OP_READ, key);
                 } catch (Exception x) {
                     log.error("", x);
@@ -1212,7 +1215,11 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
                                 //do a non blocking select
                                 keyCount = selector.selectNow();
                             } else {
+                                // todo<chify> select传入时间参数就会在规定时间内，没有事件发生马上进行返回，不至于阻塞poller线程
+                                // tomcat传入时间，是为了让poller线程有时间去处理其他额外的事情，比如清理一些死连接（timeout(keyCount,hasEvents);）
                                 keyCount = selector.select(selectorTimeout);
+//                                keyCount = selector.select();
+                                log.info("poller theaad loop + " + new Date());
                             }
                             wakeupCounter.set(0);
                         }
@@ -1259,6 +1266,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
                         } else {
                             attachment.access();
                             iterator.remove();
+                            // todo<chify> 核心方法，里面会交接给work工作线程池处理
                             processKey(sk, attachment);
                         }
                     }//while
@@ -1723,7 +1731,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
             SelectionKey key = socket.getIOChannel().keyFor(
                     socket.getPoller().getSelector());
             KeyAttachment ka = null;
-
+            log.info(Thread.currentThread().getName() + "： 开始执行work线程逻辑。");
             if (key != null) {
                 ka = (KeyAttachment)key.attachment();
             }
@@ -1741,6 +1749,7 @@ public class NioEndpoint extends AbstractEndpoint<NioChannel> {
                     doRun(key, ka);
                 }
             }
+            log.info(Thread.currentThread().getName() + "： 结束work线程逻辑。");
         }
 
         private void doRun(SelectionKey key, KeyAttachment ka) {
