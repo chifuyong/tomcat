@@ -20,6 +20,8 @@ public class DebugFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         System.out.println("[DebugFilter] before chain, uri=" + request.getRemoteAddr());
+//        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+//        httpServletResponse.setStatus(429);
         // 这里放断点即可，调试时会停在这里。
         chain.doFilter(request, response);
         System.out.println("[DebugFilter] after chain");
