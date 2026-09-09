@@ -182,6 +182,7 @@ public class NioBlockingSelector {
                     if (readTimeout < 0) {
                         att.awaitReadLatch(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
                     } else {
+                        // todo<chify> 自旋锁，不断卡在这里等待数据传输完毕
                         att.awaitReadLatch(readTimeout, TimeUnit.MILLISECONDS);
                     }
                 }catch (InterruptedException ignore) {

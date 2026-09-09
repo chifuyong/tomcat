@@ -704,6 +704,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     // socket associated with the processor. Exact requirements
                     // depend on type of long poll
                     connections.put(socket, processor);
+                    // todo<chify> 这里会继续添加一个PollerEvent事件，然后拍醒poller线程，PollerEvent再把socket挂到selector上
                     longPoll(wrapper, processor);
                 } else if (state == SocketState.OPEN) {
                     // In keep-alive but between requests. OK to recycle

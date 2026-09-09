@@ -1239,6 +1239,7 @@ public abstract class AbstractHttp11Processor<S> extends AbstractProcessor<S> {
                     // to be closed occurred.
                     checkExpectationAndResponseStatus();
                 }
+                // todo<chify> 这里面有自旋锁，会强行吞噬未读完的残余请求体
                 endRequest();
             }
 
