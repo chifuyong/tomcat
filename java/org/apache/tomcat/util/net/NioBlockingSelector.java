@@ -156,6 +156,8 @@ public class NioBlockingSelector {
      * @throws IOException if an IO Exception occurs in the underlying socket logic
      */
     public int read(ByteBuffer buf, NioChannel socket, long readTimeout) throws IOException {
+        // todo<chify> 调试时设置3s，方便调试
+//        readTimeout = 3000;
         SelectionKey key = socket.getIOChannel().keyFor(socket.getPoller().getSelector());
         if ( key == null ) throw new IOException("Key no longer registered");
         KeyReference reference = keyReferenceQueue.poll();
@@ -350,6 +352,8 @@ public class NioBlockingSelector {
                             keyCount = selector.selectNow();
                         else {
                             wakeupCounter.set(-1);
+                            // todo<chify> 时间改长方便调试
+//                            keyCount = selector.select(1000000);
                             keyCount = selector.select(1000);
                         }
                         wakeupCounter.set(0);

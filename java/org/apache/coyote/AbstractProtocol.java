@@ -602,6 +602,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                 return SocketState.CLOSED;
             }
 
+            // todo<chify> 这里会以 socket 为key存入对应的 processor 处理器
             Processor<S> processor = connections.get(socket);
             if (status == SocketStatus.DISCONNECT && processor == null) {
                 // Nothing to do. Endpoint requested a close and there is no
@@ -617,6 +618,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     processor = recycledProcessors.poll();
                 }
                 if (processor == null) {
+                    // todo<chify> 新建processor(Http11NioProcessor), 每一个socket都会对应一个 processor 对象
                     processor = createProcessor();
                 }
 

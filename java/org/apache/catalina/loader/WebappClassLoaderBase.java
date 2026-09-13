@@ -1813,7 +1813,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (0) Check our previously loaded local class cache
-            // 1.先从 Map 里去找
+            // todo<chify> 检查tomcat自己内部的缓存class
             clazz = findLoadedClass0(name);
             if (clazz != null) {
                 if (log.isDebugEnabled())
@@ -1824,7 +1824,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (0.1) Check our previously loaded class cache
-            // 2.再从 Jvm 去找（native方法），效率比较高
+            // todo<chify> 检查jvm的全局缓存
             clazz = findLoadedClass(name);
             if (clazz != null) {
                 if (log.isDebugEnabled())
@@ -1836,8 +1836,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
 
             // (0.2) Try loading the class with the system class loader, to prevent
             //       the webapp from overriding J2SE classes
-            // 尝试通过系统类加载器（AppClassLoader） 记载类，防止 webapps 重写 jdk 中的类
-            // webapps 自己写了一个 java.lang.String 是不允许的，这里设防
+            // todo<chify> 防止 webapps 重写 jdk 中的类, webapps 自己写了一个 java.lang.String 是不允许的，这里设防
             try {
                 clazz = j2seClassLoader.loadClass(name);
                 if (clazz != null) {
@@ -1873,7 +1872,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             boolean delegateLoad = delegate || filter(name);
 
             // (1) Delegate to our parent if requested
-            // 是否委派给父类去加载
+            // todo<chify> 如果开启了全局委派，先让父类（Common/Shared）去加载
             if (delegateLoad) {
                 if (log.isDebugEnabled())
                     log.debug("  Delegating to parent classloader1 " + parent);
@@ -1892,7 +1891,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (2) Search local repositories
-            // 自己去加载
+            // todo<chify> 自己去加载，只要在业务自己的目录下找到了这个类，立刻加载并返回，根本不给父加载器任何表现的机会
             if (log.isDebugEnabled())
                 log.debug("  Searching local repositories");
             try {
@@ -1909,7 +1908,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (3) Delegate to parent unconditionally
-            // 不委托的情况下，自己又没加载到，给父类加载
+            // todo<chify> 不委托的情况下，自己又没加载到，给父类加载
             if (!delegateLoad) {
                 if (log.isDebugEnabled())
                     log.debug("  Delegating to parent classloader at end: " + parent);
